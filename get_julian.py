@@ -21,7 +21,7 @@ VERSION = "0.7.5"
 def parse_args():
     parser = argparse.ArgumentParser(description="Fetch UTC time and print Julian Date")
     parser.add_argument("--version", action="store_true", help="print version and exit")
-    parser.add_argument("--debug", "-d" action="store_true", help="enable debug logging")
+    parser.add_argument("--debug", "-d", action="store_true", help="enable debug logging")
     args = parser.parse_args()
 
     if args.version:
