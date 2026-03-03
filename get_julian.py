@@ -1,21 +1,29 @@
 #!/usr/bin/env python3
 """Fetch UTC time from a public REST API and print the Julian Date.
 
-This script queries https://worldtimeapi.org/api/timezone/Etc/UTC
-and computes the Julian Date (JD) from the returned UTC time.
+This script queries the RapidAPI world-time-api3 endpoint and computes
+the Julian Date (JD) from the returned UTC time.  The RapidAPI key is
+loaded from `settings.ini` in the same directory as the script.
 """
 
 import argparse
+import configparser
 import json
 import logging
+import os
 import sys
 import socket
 from datetime import datetime, timezone
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
 
-API_URL = "https://worldtimeapi.org/api/timezone/Etc/UTC"
-VERSION = "0.7.5"
+# new RapidAPI endpoint for world-time-api3
+# API_URL = "https://world-time-api3.p.rapidapi.com/timezone/Etc/UTC"
+API_URL = "https://world-time-api3.p.rapidapi.com/timezone/US/Central"
+VERSION = "0.7.6"
+
+## settings file path (in same directory as script)
+# SETTINGS_FILE = os.path.join(os.path.dirname(__file__), "settings.ini")
 
 
 def parse_args():
@@ -32,14 +40,39 @@ def parse_args():
 
 
 
-def fetch_utc_datetime():
-    req = Request(API_URL, headers={"User-Agent": "python-http-client"})
+def load_api_key() -> str:
+    """Read the API key from a simple config.ini file.
+
+    The config file should have a line like:
+    API_KEY = your_api_key_here"""
+    config = configparser.ConfigParser()
+    config.read('config.ini')
+    api_key = config.get("RAPIDAPI", "API_KEY", fallback=None)
+    if not api_key:
+        raise ValueError(f"API_KEY not found in config file {config_path}")
+    return api_key
+
+def fetch_utc_datetime() -> datetime:
+    """Fetch current datetime from the RapidAPI world-time-api3 service.
+    Return the value from data field 'utc_datetime' as a timezone-aware datetime in UTC.
+    (If I want more data, I could return the whole data dict instead of just the [massaged] datetime.)"""
+    api_key = load_api_key()
+    logging.debug("Fetching UTC datetime from API: %s", API_URL)
+    headers = {
+        "User-Agent": "python-http-client",
+        "x-rapidapi-key": api_key,
+        "x-rapidapi-host": "world-time-api3.p.rapidapi.com",
+    }
+    req = Request(API_URL, headers=headers)
     try:
         with urlopen(req, timeout=10) as resp:
             status = getattr(resp, "status", None)
+            logging.debug("Received response with status: %s", status)
             if status is not None and status != 200:
                 body = resp.read().decode(errors="replace")
                 raise ValueError(f"HTTP error {status}: {body}")
+            logging.debug("\t Response headers: %s", resp.headers)
+            # logging.debug("\t Response: %s", resp.read().decode(errors="replace"))
             data = json.load(resp)
     except HTTPError as he:
         raise ValueError(f"HTTP error contacting {API_URL}: {he.code} {he.reason}") from he
@@ -50,8 +83,14 @@ def fetch_utc_datetime():
     except json.JSONDecodeError as je:
         raise ValueError(f"Invalid JSON response from {API_URL}: {je}") from je
 
-    # worldtimeapi returns 'utc_datetime' like '2026-02-21T12:34:56.123456+00:00'
-    dt_str = data.get("utc_datetime") or data.get("datetime")
+    logging.debug("fetch_datetime received data: %s", data)
+    print(f"\t (Local [{data.get('timezone', 'unknown')}]) time: {data.get('datetime', 'N/A')}")
+    print(f"\t (UTC time: {data.get('utc_datetime', 'N/A')})")
+    # world-time-api3 returns 'utc_datetime' string similar to
+    # '2026-02-21T12:34:56.123456+00:00'
+    # N.B. the value in the 'datetime' field is in local timezone, 
+    # so we want 'utc_datetime' for consistent UTC time
+    dt_str = data.get("utc_datetime") # or data.get("datetime")
     if not dt_str:
         # fallback: maybe 'unixtime' present
         unixt = data.get("unixtime")
@@ -70,24 +109,33 @@ def fetch_utc_datetime():
 def datetime_to_julian_date(dt: datetime) -> float:
     # Convert POSIX timestamp to Julian Date: JD = ts/86400 + 2440587.5
     ts = dt.timestamp()
+    # see also [astrophy](https://www.astropy.org) --> [Time and Dates](https://docs.astropy.org/en/stable/time/index.html);
+    
+
     return ts / 86400.0 + 2440587.5
 
 
-def main(bDebug = False):
+def main(bDebug: bool):
     # configure logging
-    level = logging.DEBUG if bDebug else logging.INFO
-    logging.basicConfig(level=level, format="%(levelname)s: %(message)s")
-    logging.debug("Debug mode enabled")
-
+    if bDebug:
+        print("Debug mode enabled")
+        level = logging.DEBUG
+    else:
+        level = logging.INFO
+    logging.basicConfig(level=level, 
+                        format="%(levelname)s: %(message)s")
+    # logging.debug("Starting get_julian.py with debug=%s", bDebug)
     try:
+        logging.debug("main fn trying `fetch_utc_datetime()`")
         dt = fetch_utc_datetime()
     except Exception as exc:
         logging.error("Error fetching UTC time: %s", exc)
         sys.exit(2)
 
+    logging.debug("Fetched datetime: %s", dt.isoformat())
     jd = datetime_to_julian_date(dt)
-    print(f"UTC datetime: {dt.isoformat()}")
-    print(f"Julian Date: {jd:.9f}")
+    print(f"Datetime = {dt.isoformat()}")
+    print(f"Julian Date = {jd:.9f}")
 
 
 if __name__ == "__main__":
