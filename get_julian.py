@@ -49,7 +49,7 @@ def load_api_key() -> str:
     config.read('config.ini')
     api_key = config.get("RAPIDAPI", "API_KEY", fallback=None)
     if not api_key:
-        raise ValueError(f"API_KEY not found in config file {config_path}")
+        raise ValueError(f"API_KEY not found in config file")
     return api_key
 
 def fetch_utc_datetime() -> datetime:
@@ -110,7 +110,7 @@ def datetime_to_julian_date(dt: datetime) -> float:
     # Convert POSIX timestamp to Julian Date: JD = ts/86400 + 2440587.5
     ts = dt.timestamp()
     # see also [astrophy](https://www.astropy.org) --> [Time and Dates](https://docs.astropy.org/en/stable/time/index.html);
-    
+
 
     return ts / 86400.0 + 2440587.5
 
