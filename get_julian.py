@@ -30,6 +30,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Fetch UTC time and print Julian Date")
     parser.add_argument("--version", action="store_true", help="print version and exit")
     parser.add_argument("--debug", "-d", action="store_true", help="enable debug logging")
+    parser.add_argument("--local", "-l", action="store_true", help="use local system time instead of API    ")
     args = parser.parse_args()
 
     if args.version:
@@ -52,55 +53,60 @@ def load_api_key() -> str:
         raise ValueError(f"API_KEY not found in config file")
     return api_key
 
-def fetch_utc_datetime() -> datetime:
+def fetch_utc_datetime(bLocal: bool = False ) -> datetime:
     """Fetch current datetime from the RapidAPI world-time-api3 service.
     Return the value from data field 'utc_datetime' as a timezone-aware datetime in UTC.
     (If I want more data, I could return the whole data dict instead of just the [massaged] datetime.)"""
     bUnixTime = False
-    try:
-        api_key = load_api_key()
-    except ValueError as ve:
-        logging.error("Error loading API key: %s", ve)
-        # instead, go to fallback: use local system time in UTC
-        bUnixTime = True
+    if not bLocal:
+        try:
+            api_key = load_api_key()
+        except ValueError as ve:
+            logging.error("Error loading API key: %s", ve)
+            # instead, go to fallback: use local system time in UTC
+            bUnixTime = True
 
 
-    logging.debug("Fetching UTC datetime from API: %s", API_URL)
-    headers = {
-        "User-Agent": "python-http-client",
-        "x-rapidapi-key": api_key,
-        "x-rapidapi-host": "world-time-api3.p.rapidapi.com",
-    }
-    req = Request(API_URL, headers=headers)
-    try:
-        with urlopen(req, timeout=10) as resp:
-            status = getattr(resp, "status", None)
-            logging.debug("Received response with status: %s", status)
-            if status is not None and status != 200:
-                body = resp.read().decode(errors="replace")
-                raise ValueError(f"HTTP error {status}: {body}")
-            logging.debug("\t Response headers: %s", resp.headers)
-            # logging.debug("\t Response: %s", resp.read().decode(errors="replace"))
-            data = json.load(resp)
-    except HTTPError as he:
-        raise ValueError(f"HTTP error contacting {API_URL}: {he.code} {he.reason}") from he
-    except URLError as ue:
-        raise ConnectionError(f"Network error contacting {API_URL}: {ue.reason}") from ue
-    except socket.timeout as te:
-        raise TimeoutError(f"Request to {API_URL} timed out: {te}") from te
-    except json.JSONDecodeError as je:
-        raise ValueError(f"Invalid JSON response from {API_URL}: {je}") from je
+        logging.debug("Fetching UTC datetime from API: %s", API_URL)
+        headers = {
+            "User-Agent": "python-http-client",
+            "x-rapidapi-key": api_key,
+            "x-rapidapi-host": "world-time-api3.p.rapidapi.com",
+        }
+        req = Request(API_URL, headers=headers)
+        try:
+            with urlopen(req, timeout=10) as resp:
+                status = getattr(resp, "status", None)
+                logging.debug("Received response with status: %s", status)
+                if status is not None and status != 200:
+                    body = resp.read().decode(errors="replace")
+                    raise ValueError(f"HTTP error {status}: {body}")
+                logging.debug("\t Response headers: %s", resp.headers)
+                # logging.debug("\t Response: %s", resp.read().decode(errors="replace"))
+                data = json.load(resp)
+        except HTTPError as he:
+            raise ValueError(f"HTTP error contacting {API_URL}: {he.code} {he.reason}") from he
+        except URLError as ue:
+            raise ConnectionError(f"Network error contacting {API_URL}: {ue.reason}") from ue
+        except socket.timeout as te:
+            raise TimeoutError(f"Request to {API_URL} timed out: {te}") from te
+        except json.JSONDecodeError as je:
+            raise ValueError(f"Invalid JSON response from {API_URL}: {je}") from je
 
-    logging.debug("fetch_datetime received data: %s", data)
-    print(f"\t (Local [{data.get('timezone', 'unknown')}]) time: {data.get('datetime', 'N/A')}")
-    print(f"\t (UTC time: {data.get('utc_datetime', 'N/A')})")
-    # world-time-api3 returns 'utc_datetime' string similar to
-    # '2026-02-21T12:34:56.123456+00:00'
-    # N.B. the value in the 'datetime' field is in local timezone, 
-    # so we want 'utc_datetime' for consistent UTC time
-    dt_str = data.get("utc_datetime") # or data.get("datetime")
-
-
+        logging.debug("fetch_datetime received data: %s", data)
+        print(f"\t (Local [{data.get('timezone', 'unknown')}]) time: {data.get('datetime', 'N/A')}")
+        print(f"\t (UTC time: {data.get('utc_datetime', 'N/A')})")
+        # world-time-api3 returns 'utc_datetime' string similar to
+        # '2026-02-21T12:34:56.123456+00:00'
+        # N.B. the value in the 'datetime' field is in local timezone, 
+        # so we want 'utc_datetime' for consistent UTC time
+        dt_str = data.get("utc_datetime") # or data.get("datetime")
+    else:
+        logging.debug("Using local system time instead of API")
+        dt = datetime.now(timezone.utc)
+        logging.debug("Local system time (UTC): %s", dt.isoformat())
+        return dt
+    
     if not dt_str:
         # fallback: maybe 'unixtime' present
         unixt = data.get("unixtime")
@@ -125,7 +131,8 @@ def datetime_to_julian_date(dt: datetime) -> float:
     return ts / 86400.0 + 2440587.5
 
 
-def main(bDebug: bool):
+def main(args):
+    bDebug = args.debug
     # configure logging
     if bDebug:
         print("Debug mode enabled")
@@ -137,7 +144,7 @@ def main(bDebug: bool):
     # logging.debug("Starting get_julian.py with debug=%s", bDebug)
     try:
         logging.debug("main fn trying `fetch_utc_datetime()`")
-        dt = fetch_utc_datetime()
+        dt = fetch_utc_datetime(args.local)
     except Exception as exc:
         logging.error("Error fetching UTC time: %s", exc)
         sys.exit(2)
@@ -152,5 +159,5 @@ if __name__ == "__main__":
     args = parse_args()
 
     if args:
-       main(args.debug)
+       main(args)
 
