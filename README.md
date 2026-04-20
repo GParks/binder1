@@ -5,7 +5,7 @@ This repository contains a small script, `get_julian.py`, which fetches
 UTC time from the **world‑time‑api3** service on RapidAPI and prints the
 corresponding Julian Date.
 
-I've put this on MyBinder.org: [Launch link](mybinder.org/v2/gh/GParks/binder1/HEAD)
+I've put this on MyBinder.org: [Launch link](https://mybinder.org/v2/gh/GParks/binder1/HEAD)
 
 
 ## Configuration
