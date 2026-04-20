@@ -41,5 +41,20 @@ See [Zero to Binder](https://book.the-turing-way.org/communication/binder/zero-t
 
 # &ldquo; What's past &hellip;&nbsp; &rdquo;
 
+Having gotten this far, I'm "moving on"...
+
+    Activating profile: /srv/conda/etc/profile.d/conda.sh
+
+<code>jovyan@jupyter-gparks-binder1-jv0d8hk1:&#x7e;$ <b>python3 get_julian.py</b></code>
+    ERROR: Error loading API key: API_KEY not found in config file
+    ERROR: Error fetching UTC time: local variable 'api_key' referenced before assignment
+
+<code>jovyan@jupyter-gparks-binder1-jv0d8hk1:&tilde;$ <b>python3 get_julian.py <em>--local</em></b></code>
+```
+Datetime = 2026-04-20T23:08:52.093413+00:00
+Julian Date = 2461151.464491822
+jovyan@jupyter-gparks-binder1-jv0d8hk1:~$ 
+```
+
 [Rel. v4.5.6](https://github.com/jupyterlab/jupyterlab/releases/tag/v4.5.6)
 
