@@ -5,6 +5,9 @@ This repository contains a small script, `get_julian.py`, which fetches
 UTC time from the **world‑time‑api3** service on RapidAPI and prints the
 corresponding Julian Date.
 
+I've put this on MyBinder.org: [Launch link](mybinder.org/v2/gh/GParks/binder1/HEAD)
+
+
 ## Configuration
 
 An API key is required by RapidAPI.  Place your key in `settings.ini`
@@ -36,5 +39,7 @@ file cannot be found, it exits with an error.
 
 See [Zero to Binder](https://book.the-turing-way.org/communication/binder/zero-to-binder/)
 
-# &ldquo; What's past &hellip&nbsp; &rdquo;
+# &ldquo; What's past &hellip;&nbsp; &rdquo;
+
+[Rel. v4.5.6](https://github.com/jupyterlab/jupyterlab/releases/tag/v4.5.6)
 
