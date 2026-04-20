@@ -56,7 +56,15 @@ def fetch_utc_datetime() -> datetime:
     """Fetch current datetime from the RapidAPI world-time-api3 service.
     Return the value from data field 'utc_datetime' as a timezone-aware datetime in UTC.
     (If I want more data, I could return the whole data dict instead of just the [massaged] datetime.)"""
-    api_key = load_api_key()
+    bUnixTime = False
+    try:
+        api_key = load_api_key()
+    except ValueError as ve:
+        logging.error("Error loading API key: %s", ve)
+        # instead, go to fallback: use local system time in UTC
+        bUnixTime = True
+
+
     logging.debug("Fetching UTC datetime from API: %s", API_URL)
     headers = {
         "User-Agent": "python-http-client",
@@ -91,6 +99,8 @@ def fetch_utc_datetime() -> datetime:
     # N.B. the value in the 'datetime' field is in local timezone, 
     # so we want 'utc_datetime' for consistent UTC time
     dt_str = data.get("utc_datetime") # or data.get("datetime")
+
+
     if not dt_str:
         # fallback: maybe 'unixtime' present
         unixt = data.get("unixtime")
