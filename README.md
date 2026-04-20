@@ -46,6 +46,7 @@ Having gotten this far, I'm "moving on"...
     Activating profile: /srv/conda/etc/profile.d/conda.sh
 
 <code>jovyan@jupyter-gparks-binder1-jv0d8hk1:&#x7e;$ <b>python3 get_julian.py</b></code>
+
     ERROR: Error loading API key: API_KEY not found in config file
     ERROR: Error fetching UTC time: local variable 'api_key' referenced before assignment
 
